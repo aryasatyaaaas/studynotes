@@ -1,0 +1,1 @@
+UPDATE "User" SET role = 'SUPER_ADMIN' WHERE id = (SELECT id FROM "User" LIMIT 1);

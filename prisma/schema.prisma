@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          UserRole  @default(USER)
+  isBanned      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  notes         Note[]
+  subjects      Subject[]
+  sessions      Session[]
+  accounts      Account[]
+  announcements Announcement[]
+}
+
+model Announcement {
+  id        String             @id @default(cuid())
+  title     String
+  message   String             @db.Text
+  type      AnnouncementType   @default(INFO)
+  isActive  Boolean            @default(true)
+  createdBy String
+  author    User               @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+  expiresAt DateTime?
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  SUCCESS
+  MAINTENANCE
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6366f1")
+  emoji     String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes     Note[]
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Note {
+  id          String       @id @default(cuid())
+  title       String
+  content     String       @db.Text
+  summary     String?      @db.Text
+  isPinned    Boolean      @default(false)
+  tags        String[]
+  subjectId   String?
+  subject     Subject?     @relation(fields: [subjectId], references: [id])
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  deletedAt     DateTime?
+  search_vector Unsupported("tsvector")?
+
+  @@index([userId])
+  @@index([userId, subjectId])
+  @@index([userId, isPinned])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  url       String
+  size      Int
+  mimeType  String
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
